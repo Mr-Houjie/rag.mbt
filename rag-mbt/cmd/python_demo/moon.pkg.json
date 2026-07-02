@@ -1,0 +1,7 @@
+{
+  "is-main": true,
+  "import": [
+    { "path": "user/rag-mbt", "alias": "ragmbt" },
+    { "path": "user/rag-mbt/python_backends", "alias": "pybackends" }
+  ]
+}
