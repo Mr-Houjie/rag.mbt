@@ -2,38 +2,25 @@ fn main {
   println("\n")
   println("╔══════════════════════════════════════════╗")
   println("║    🚀 rag-mbt: RAG 2阶段6模块演示       ║")
-  println("║    MoonBit 原生 RAG 库                  ║")
-  println("║    Embedder: bge-small-zh (本地)        ║")
-  println("║    Generator: DeepSeek API              ║")
+  println("║    MoonBit 原生 RAG 库 (无 Python/API)  ║")
+  println("║    Embedder: TF-IDF (MoonBit 原生)      ║")
+  println("║    Retriever: 向量检索 (cosine)         ║")
+  println("║    Generator: MockGenerator             ║")
   println("╚══════════════════════════════════════════╝\n")
 
-  // 从配置文件读取 API Key (用于 Generator)
-  let config_content = @ragmbt.fs_read_all("config.json")
-  if config_content.length() == 0 {
-    println("❌ 无法读取 config.json，请确保配置文件存在")
-    return
-  }
-  
-  let api_key = extract_json_string(config_content, "api_key")
-  let base_url = extract_json_string(config_content, "base_url")
-  
-  if api_key.length() == 0 {
-    println("❌ 配置文件缺少 api_key")
-    return
-  }
+  // ============================================================
+  // 模式 1:纯原生 TF-IDF Pipeline(默认,无需 Python/API)
+  // ============================================================
+  println(">>> 启动纯原生 TF-IDF Pipeline...\n")
+  let rag = @ragmbt.Builder::native_tfidf(data_dir="rag_data").build()
 
-  let rag = @ragmbt.RAGPipeline::builder()
-    .with_loader(@ragmbt.TxtLoader::new("docs/"))
-    .with_splitter(@ragmbt.SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
-    .with_embedder(@ragmbt.LocalEmbedder::new())  // 本地 bge-small-zh 模型
-    .with_data_dir("rag_data")
-    .with_generator(@ragmbt.OpenAiGenerator::new(api_key, base_url=base_url))  // DeepSeek API
-    .build()
-  
+  rag.describe()
   println("✅ Pipeline 构建完成\n")
 
+  // 清空旧数据,重新构建索引
   rag.index("")
 
+  // 检索 + 生成
   let query1 = "什么是 MoonBit？"
   println("─".repeat(50))
   println("  💬 \{query1}")
@@ -56,37 +43,74 @@ fn main {
   println("📝 结果:\n\{r3.answer}")
 
   println("\n╔══════════════════════════════════════════╗")
-  println("║  ✅ rag-mbt 端到端验证通过！              ║")
+  println("║  ✅ rag-mbt 纯原生端到端验证通过!         ║")
   println("╚══════════════════════════════════════════╝\n")
-}
 
-// 简单的 JSON 字符串提取函数
-fn extract_json_string(json : String, key : String) -> String {
-  let key_pattern = "\"" + key + "\""
-  match json.find(key_pattern) {
-    None => ""
-    Some(idx) => {
-      // 找到 key 后的值
-      let rest = json[idx + key_pattern.length():]
-      match rest.find(":") {
-        None => ""
-        Some(colon_idx) => {
-          // 找到引号包围的字符串值
-          let value_part = rest[colon_idx + 1:]
-          let trim_part = value_part.trim_start()
-          
-          // 检查是否以引号开始
-          if trim_part.length() > 0 && trim_part[0] == '"' {
-            // 找到结束引号
-            match trim_part[1:].find("\"") {
-              None => ""
-              Some(end_quote) => trim_part[1:end_quote + 1].to_owned()
-            }
-          } else {
-            ""
-          }
-        }
-      }
-    }
+  // ============================================================
+  // 演示 BM25 关键词检索(独立模块,纯 MoonBit 原生)
+  // ============================================================
+  println("╔══════════════════════════════════════════╗")
+  println("║  📖 BM25 关键词检索演示 (MoonBit 原生)   ║")
+  println("╚══════════════════════════════════════════╝\n")
+
+  let bm25 = @ragmbt.BM25Retriever::new()
+  let docs = @ragmbt.load_static_docs()
+  let meta = @ragmbt.make_meta([])
+  // 把每个文档作为一个 chunk
+  let bm25_chunks : Array[@ragmbt.Chunk] = []
+  for i = 0; i < docs.length(); i = i + 1 {
+    let chunk = @ragmbt.Chunk::new("bm25_chunk_\{i}", docs[i].content, meta)
+    bm25_chunks.push(chunk)
   }
+  bm25.add_documents(bm25_chunks)
+  println("已索引 \{bm25.count()} 个文档到 BM25\n")
+
+  let bm25_query = "MoonBit 编译"
+  println("🔍 BM25 查询: \{bm25_query}")
+  let bm25_results = bm25.retrieve(bm25_query, 2)
+  for i = 0; i < bm25_results.length(); i = i + 1 {
+    println("  [结果 \{i + 1}] score=\{bm25_results[i].score}")
+    let preview = bm25_results[i].chunk.text
+    let preview_len = if preview.length() > 60 { 60 } else { preview.length() }
+    let preview_str = preview[0:preview_len].to_string()
+    println("  \{preview_str}...")
+    println("")
+  }
+
+  // ============================================================
+  // 演示 HybridRetriever (RRF 融合)
+  // ============================================================
+  println("╔══════════════════════════════════════════╗")
+  println("║  🔀 HybridRetriever (RRF 融合) 演示      ║")
+  println("╚══════════════════════════════════════════╝\n")
+
+  // 创建两个独立的检索器,都索引同样的文档
+  let bm25_a = @ragmbt.BM25Retriever::new()
+  bm25_a.add_documents(bm25_chunks)
+  let bm25_b = @ragmbt.BM25Retriever::new(k1=2.0, b=0.5)  // 不同参数
+  bm25_b.add_documents(bm25_chunks)
+
+  let hybrid = @ragmbt.HybridRetriever::new()
+  hybrid.add("BM25-default", fn(q : String, k : Int) {
+    bm25_a.retrieve(q, k)
+  })
+  hybrid.add("BM25-tuned", fn(q : String, k : Int) {
+    bm25_b.retrieve(q, k)
+  })
+
+  let hybrid_query = "向量数据库"
+  println("🔍 Hybrid 查询: \{hybrid_query}")
+  let hybrid_results = hybrid.retrieve(hybrid_query, 3)
+  for i = 0; i < hybrid_results.length(); i = i + 1 {
+    println("  [结果 \{i + 1}] rrf_score=\{hybrid_results[i].score}")
+    let preview = hybrid_results[i].chunk.text
+    let preview_len = if preview.length() > 60 { 60 } else { preview.length() }
+    let preview_str = preview[0:preview_len].to_string()
+    println("  \{preview_str}...")
+    println("")
+  }
+
+  println("╔══════════════════════════════════════════╗")
+  println("║  ✅ 所有原生模块演示完成!                 ║")
+  println("╚══════════════════════════════════════════╝\n")
 }
