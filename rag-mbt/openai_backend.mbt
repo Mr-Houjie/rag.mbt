@@ -17,21 +17,28 @@ pub fn OpenAiGenerator::new(api_key : String, model~ : String = "deepseek-chat",
 fn OpenAiGenerator::run_python_generate(self : OpenAiGenerator, query : String, context_text : String) -> String {
   let script = "import sys, json\n" +
     "from openai import OpenAI\n" +
-    "data = json.loads(sys.stdin.read())\n" +
-    "client = OpenAI(api_key=data['api_key'], base_url=data['base_url'])\n" +
+    "# 用分隔符分割参数\n" +
+    "data = sys.stdin.read()\n" +
+    "parts = data.split('___PARAM_SEP___')\n" +
+    "api_key = parts[0]\n" +
+    "base_url = parts[1]\n" +
+    "model = parts[2]\n" +
+    "system_prompt = parts[3]\n" +
+    "user_content = parts[4]\n" +
+    "client = OpenAI(api_key=api_key, base_url=base_url)\n" +
     "response = client.chat.completions.create(\n" +
-    "    model=data['model'],\n" +
+    "    model=model,\n" +
     "    messages=[\n" +
-    "        {'role': 'system', 'content': data['system_prompt']},\n" +
-    "        {'role': 'user', 'content': data['user_content']}\n" +
+    "        {'role': 'system', 'content': system_prompt},\n" +
+    "        {'role': 'user', 'content': user_content}\n" +
     "    ]\n" +
     ")\n" +
     "print(response.choices[0].message.content)\n"
 
-  // 构造 JSON 输入
-  let json_input = "{\"api_key\": \"" + self.api_key + "\", \"base_url\": \"" + self.base_url + "\", \"model\": \"" + self.model + "\", \"system_prompt\": \"" + self.system_prompt + "\", \"user_content\": \"参考资料：\\n" + context_text + "\\n问题：" + query + "\"}"
+  // 用分隔符分割参数
+  let input = self.api_key + "___PARAM_SEP___" + self.base_url + "___PARAM_SEP___" + self.model + "___PARAM_SEP___" + self.system_prompt + "___PARAM_SEP___" + "参考资料：\n" + context_text + "\n问题：" + query
 
-  let result = run_python_script("python3", script, json_input)
+  let result = run_python_script("/opt/homebrew/bin/python3.13", script, input)
   result
 }
 

@@ -13,29 +13,28 @@ pub fn LocalEmbedder::new(model_name~ : String = "BAAI/bge-small-zh") -> LocalEm
 
 /// 用 Python 脚本一次性完成加载+编码，返回 JSON 字符串
 fn LocalEmbedder::run_python_encode(self : LocalEmbedder, texts : Array[String]) -> String {
-  // 构造 Python 脚本，通过 stdin 传参，避免复杂的 PyObject 操作
-  let mut script = "import sys, json\n"
-  script = script + "from sentence_transformers import SentenceTransformer\n"
-  script = script + "model = SentenceTransformer('" + self.model_name + "')\n"
-  script = script + "texts = json.loads(sys.stdin.read())\n"
-  script = script + "embs = model.encode(texts)\n"
-  script = script + "result = [[float(x) for x in emb] for emb in embs]\n"
-  script = script + "print(json.dumps(result))\n"
+  // 构造 Python 脚本，通过 stdin 传参
+  let script = "import sys, json, os\n" +
+    "os.environ['HF_HUB_OFFLINE'] = '1'\n" +
+    "from sentence_transformers import SentenceTransformer\n" +
+    "model = SentenceTransformer('" + self.model_name + "')\n" +
+    "# 用特殊分隔符分割文本\n" +
+    "data = sys.stdin.read()\n" +
+    "texts = data.split('___TEXT_SEP___')\n" +
+    "embs = model.encode(texts)\n" +
+    "result = [[float(x) for x in emb] for emb in embs]\n" +
+    "print(json.dumps(result))\n"
 
-  // 将 texts 转成 JSON 字符串
-  let mut json_texts = "["
+  // 用特殊分隔符分割文本（不会出现在正常文档中）
+  let mut input = ""
   for i = 0; i < texts.length(); i = i + 1 {
     if i > 0 {
-      json_texts = json_texts + ", "
+      input = input + "___TEXT_SEP___"
     }
-    json_texts = json_texts + "\"" + texts[i] + "\""
+    input = input + texts[i]
   }
-  json_texts = json_texts + "]"
 
-  // 通过 C FFI 调用 python 执行脚本
-  let full_input = json_texts
-  let cmd = "python3"
-  let result = run_python_script(cmd, script, full_input)
+  let result = run_python_script("/opt/homebrew/bin/python3.13", script, input)
   result
 }
 

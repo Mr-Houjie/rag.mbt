@@ -8,22 +8,75 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-// UTF-16 (MoonBit string) 转 C string
+// UTF-16 (MoonBit string) 转 UTF-8 C string
 static char* mb_to_cstr(moonbit_string_t ms) {
   int32_t len = Moonbit_array_length(ms);
-  char* cstr = (char*)malloc(len + 1);
+  // UTF-8 最多 4 字节 per 字符，分配足够空间
+  char* cstr = (char*)malloc(len * 4 + 1);
+  int j = 0;
   for (int i = 0; i < len; i++) {
-    cstr[i] = (ms[i] < 0x80) ? (char)ms[i] : '?';
+    uint16_t c = ms[i];
+    if (c < 0x80) {
+      cstr[j++] = (char)c;
+    } else if (c < 0x800) {
+      cstr[j++] = (char)(0xC0 | (c >> 6));
+      cstr[j++] = (char)(0x80 | (c & 0x3F));
+    } else {
+      cstr[j++] = (char)(0xE0 | (c >> 12));
+      cstr[j++] = (char)(0x80 | ((c >> 6) & 0x3F));
+      cstr[j++] = (char)(0x80 | (c & 0x3F));
+    }
   }
-  cstr[len] = '\0';
+  cstr[j] = '\0';
   return cstr;
 }
 
-// C string 转 MoonBit string (UTF-16)
+// UTF-8 C string 转 UTF-16 MoonBit string
 static moonbit_string_t cstr_to_mb(const char* cstr, int32_t len) {
-  moonbit_string_t ms = moonbit_make_string(len, 0);
-  for (int i = 0; i < len; i++) {
-    ms[i] = (uint16_t)(unsigned char)cstr[i];
+  // 先计算 UTF-16 字符数
+  int32_t utf16_len = 0;
+  int i = 0;
+  while (i < len) {
+    unsigned char c = (unsigned char)cstr[i];
+    if (c < 0x80) {
+      i++;
+    } else if (c < 0xC0) {
+      i += 2;
+    } else if (c < 0xE0) {
+      i += 2;
+    } else if (c < 0xF0) {
+      i += 3;
+    } else {
+      i += 4;
+    }
+    utf16_len++;
+  }
+
+  moonbit_string_t ms = moonbit_make_string(utf16_len, 0);
+  int j = 0;
+  i = 0;
+  while (i < len && j < utf16_len) {
+    unsigned char c = (unsigned char)cstr[i];
+    if (c < 0x80) {
+      ms[j++] = (uint16_t)c;
+      i++;
+    } else if (c < 0xC0) {
+      // 无效的 UTF-8 序列
+      ms[j++] = (uint16_t)'?';
+      i++;
+    } else if (c < 0xE0) {
+      uint16_t ch = ((c & 0x1F) << 6) | ((unsigned char)cstr[i+1] & 0x3F);
+      ms[j++] = ch;
+      i += 2;
+    } else if (c < 0xF0) {
+      uint16_t ch = ((c & 0x0F) << 12) | (((unsigned char)cstr[i+1] & 0x3F) << 6) | ((unsigned char)cstr[i+2] & 0x3F);
+      ms[j++] = ch;
+      i += 3;
+    } else {
+      // 4字节 UTF-8 (emoji等)，简化处理
+      ms[j++] = (uint16_t)'?';
+      i += 4;
+    }
   }
   return ms;
 }
@@ -126,9 +179,9 @@ moonbit_string_t run_python_script(moonbit_string_t cmd, moonbit_string_t script
   fflush(input_tmp);
   rewind(input_tmp);
 
-  // 构造命令：python3 /dev/fd/SCRIPT_FD < /dev/fd/INPUT_FD 2>/dev/null
+  // 构造命令：python3 /dev/fd/SCRIPT_FD < /dev/fd/INPUT_FD
   char command[512];
-  snprintf(command, sizeof(command), "%s /dev/fd/%d < /dev/fd/%d 2>/dev/null",
+  snprintf(command, sizeof(command), "%s /dev/fd/%d < /dev/fd/%d",
            c_cmd, fileno(script_tmp), fileno(input_tmp));
 
   FILE* output_pipe = popen(command, "r");
