@@ -1,7 +1,9 @@
 {
-  "name": "user/rag-mbt",
+  "name": "houjie/rag-mbt",
   "version": "0.1.0",
   "deps": {},
   "license": "MIT",
-  "description": "MoonBit RAG (Retrieval-Augmented Generation) Library - 2阶段6模块完整封装"
+  "description": "MoonBit RAG (Retrieval-Augmented Generation) Library - 2阶段6模块完整封装",
+  "readme": "README.md",
+  "repository": "https://github.com/houjie/rag-mbt"
 }
