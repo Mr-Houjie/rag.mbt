@@ -17,6 +17,10 @@ pub extern "C" fn fs_remove_file(path : String) -> Int = "fs_remove_file"
 #owned(path)
 extern "C" fn fs_ensure_dir(path : String) -> Int = "fs_ensure_dir"
 
+// 从 stdin 读取一行(用于交互式命令行),prompt 为提示符
+#owned(prompt)
+pub extern "C" fn fs_read_line(prompt : String) -> String = "fs_read_line"
+
 // 辅助：读取文件内容
 fn read_file(path : String) -> String? {
   let content = fs_read_all(path)

@@ -221,3 +221,22 @@ moonbit_string_t run_python_script(moonbit_string_t cmd, moonbit_string_t script
   free(output);
   return result;
 }
+
+// 从 stdin 读取一行(去掉末尾换行符),EOF 或读取失败返回空字符串
+// prompt 参数会先打印到 stdout(不换行),用于交互式提示符
+moonbit_string_t fs_read_line(moonbit_string_t prompt) {
+  char* p = mb_to_cstr(prompt);
+  fputs(p, stdout);
+  free(p);
+  fflush(stdout);
+  char buf[4096];
+  if (fgets(buf, sizeof(buf), stdin) == NULL) {
+    return moonbit_make_string(0, 0);
+  }
+  // 去掉末尾换行符
+  int len = strlen(buf);
+  while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
+    buf[--len] = '\0';
+  }
+  return cstr_to_mb(buf, len);
+}
