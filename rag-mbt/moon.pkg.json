@@ -1,3 +1,14 @@
 {
-  "import": []
+  "import": [
+    "moonbitlang/core/json",
+    "moonbitlang/core/builtin",
+    "Kaida-Amethyst/python"
+  ],
+  "supported-targets": ["native"],
+  "native-stub": ["file_io.c"],
+  "link": {
+    "native": {
+      "stub-cc-flags": "-O2"
+    }
+  }
 }

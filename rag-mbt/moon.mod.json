@@ -2,7 +2,9 @@
   "name": "user/rag-mbt",
   "version": "0.1.0",
   "deps": {
-    "Kaida-Amethyst/python": "0.1.7"
+    "Kaida-Amethyst/python": {
+      "path": ".mooncakes/Kaida-Amethyst/python"
+    }
   },
   "license": "Apache-2.0",
   "description": "MoonBit RAG (Retrieval-Augmented Generation) Library - 2阶段6模块完整封装"

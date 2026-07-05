@@ -11,8 +11,21 @@ fn main {
   println("║    需要 C 编译器 + Python + openai      ║")
   println("╚══════════════════════════════════════════╝\n")
 
-  // 从环境变量或硬编码读取 API key
-  let api_key = @pybackends.read_env("OPENAI_API_KEY")
+  // 从环境变量读取 API key（使用 Python）
+  @python.init_py()
+  let os = @python.pyimport("os").unwrap()
+  let api_key = match os.get_attr("environ") {
+    None => ""
+    Some(@python.PyObjectEnum::PyDict(environ)) => {
+      match environ.get("OPENAI_API_KEY") {
+        None => ""
+        Some(@python.PyObjectEnum::PyString(s)) => s.to_string()
+        _ => ""
+      }
+    }
+    _ => ""
+  }
+  
   if api_key == "" {
     println("❌ 请设置环境变量 OPENAI_API_KEY")
     println("   PowerShell: $env:OPENAI_API_KEY='sk-...'")
@@ -25,9 +38,9 @@ fn main {
   let rag = @ragmbt.RAGPipeline::builder()
     .with_loader(@ragmbt.TxtLoader::new("docs/"))
     .with_splitter(@ragmbt.SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
-    .with_embedder(@pybackends.OpenAiEmbedder::new(api_key))
+    .with_embedder(@ragmbt.OpenAiEmbedder::new(api_key))
     .with_store(@ragmbt.InMemoryStore::new())
-    .with_generator(@pybackends.OpenAiGenerator::new(api_key))
+    .with_generator(@ragmbt.OpenAiGenerator::new(api_key))
     .build()
   
   println("✅ Pipeline 构建完成 (使用 OpenAI 后端)\n")

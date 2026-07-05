@@ -6,8 +6,8 @@ struct RAGPipeline {
   loader : TxtLoader
   splitter : SimpleSplitter
   embedder : MockEmbedder
-  store : InMemoryStore
-  retriever : SimpleRetriever
+  store : FileStore
+  retriever : FileRetriever
   generator : MockGenerator
 }
 
@@ -19,12 +19,13 @@ struct Builder {
   loader : TxtLoader?
   splitter : SimpleSplitter?
   embedder : MockEmbedder?
-  store : InMemoryStore?
+  store : FileStore?
+  data_dir : String?
   generator : MockGenerator?
 }
 
 pub fn RAGPipeline::builder() -> Builder {
-  { loader: None, splitter: None, embedder: None, store: None, generator: None }
+  { loader: None, splitter: None, embedder: None, store: None, data_dir: None, generator: None }
 }
 
 pub fn Builder::with_loader(self : Builder, loader : TxtLoader) -> Builder {
@@ -39,8 +40,12 @@ pub fn Builder::with_embedder(self : Builder, embedder : MockEmbedder) -> Builde
   { ..self, embedder: Some(embedder) }
 }
 
-pub fn Builder::with_store(self : Builder, store : InMemoryStore) -> Builder {
+pub fn Builder::with_store(self : Builder, store : FileStore) -> Builder {
   { ..self, store: Some(store) }
+}
+
+pub fn Builder::with_data_dir(self : Builder, dir : String) -> Builder {
+  { ..self, data_dir: Some(dir) }
 }
 
 pub fn Builder::with_generator(self : Builder, generator : MockGenerator) -> Builder {
@@ -62,13 +67,20 @@ pub fn Builder::build(self : Builder) -> RAGPipeline {
   }
   let store = match self.store {
     Some(s) => s
-    None => abort("❌ store 未配置")
+    None => {
+      let dir = match self.data_dir {
+        Some(d) => d
+        None => "rag_data"
+      }
+      let store_path = "\{dir}/vectors.json"
+      FileStore::new(store_path)
+    }
   }
   let generator = match self.generator {
     Some(g) => g
     None => abort("❌ generator 未配置")
   }
-  let retriever = SimpleRetriever::new(embedder, store)
+  let retriever = FileRetriever::new(embedder, store)
   { loader, splitter, embedder, store, retriever, generator }
 }
 

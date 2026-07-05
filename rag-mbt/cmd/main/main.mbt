@@ -9,7 +9,7 @@ fn main {
     .with_loader(@ragmbt.TxtLoader::new("docs/"))
     .with_splitter(@ragmbt.SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
     .with_embedder(@ragmbt.MockEmbedder::new(dimension=32))
-    .with_store(@ragmbt.InMemoryStore::new())
+    .with_data_dir("rag_data")
     .with_generator(@ragmbt.MockGenerator::new())
     .build()
   

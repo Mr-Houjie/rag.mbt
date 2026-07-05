@@ -1,0 +1,22 @@
+# Python framework (use system Python or Homebrew instead)
+Python.framework/
+
+# Build artifacts
+_build/
+*.o
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files
+rag_data/
+*.json
+!moon.pkg.json
+!moon.mod.json
