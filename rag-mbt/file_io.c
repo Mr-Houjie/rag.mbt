@@ -108,18 +108,14 @@ moonbit_string_t fs_read_all(moonbit_string_t path) {
 // 写入文件，返回写入字节数
 int32_t fs_write_all(moonbit_string_t path, moonbit_string_t data) {
   char* c_path = mb_to_cstr(path);
-  int32_t len = Moonbit_array_length(data);
   FILE* f = fopen(c_path, "wb");
   free(c_path);
   if (!f) return 0;
-  // 逐字符写入（MoonBit string 是 UTF-16）
-  size_t written = 0;
-  for (int i = 0; i < len; i++) {
-    if (data[i] < 0x80) {
-      fputc(data[i], f);
-      written++;
-    }
-  }
+  // 转换为 UTF-8 再写入（支持中文,之前只写 ASCII 导致中文丢失）
+  char* c_data = mb_to_cstr(data);
+  size_t data_len = strlen(c_data);
+  size_t written = fwrite(c_data, 1, data_len, f);
+  free(c_data);
   fclose(f);
   return (int32_t)written;
 }

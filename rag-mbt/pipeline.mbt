@@ -269,6 +269,8 @@ pub fn Builder::native_mock(data_dir~ : String = "rag_data") -> Builder {
 pub fn Builder::native_tfidf(data_dir~ : String = "rag_data") -> Builder {
   let dir = data_dir
   let store_path = "\{dir}/vectors.json"
+  // 清理旧数据,避免多次运行累加(之前会从 5 累加到 40+)
+  let _ = fs_remove_file(store_path)
   let store = FileStore::new(store_path)
   let embedder = TfidfEmbedder::new()
   RAGPipeline::builder()
@@ -397,11 +399,14 @@ pub fn RAGPipeline::query(self : RAGPipeline, query : String, top_k~ : Int = 3) 
   let results = (self.retrieve_fn)(query, top_k)
   println("  ✅ 检索到 \{results.length()} 条相关结果")
 
-  // 打印检索到的内容
+  // 打印检索到的内容(只显示预览,完整内容由 Generator 输出)
   for i = 0; i < results.length(); i = i + 1 {
-    println("  [来源 \{i + 1}] score=\{results[i].score}")
-    println("  \{results[i].chunk.text}")
-    println("")
+    let text = results[i].chunk.text
+    let text_len = text.length()
+    let preview_len = if text_len > 60 { 60 } else { text_len }
+    let preview = text[0:preview_len].to_string()
+    let suffix = if text_len > 60 { "..." } else { "" }
+    println("  [来源 \{i + 1}] score=\{results[i].score}  | \{preview}\{suffix}")
   }
 
   println("[6/6] 生成回答...")

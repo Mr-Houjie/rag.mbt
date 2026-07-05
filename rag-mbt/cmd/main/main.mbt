@@ -41,14 +41,6 @@ fn main {
     println("─".repeat(50))
     println(r.answer)
     println("─".repeat(50))
-    println("📚 来源文档数: \{r.sources.length()}")
-    // 显示检索到的文档预览
-    for i = 0; i < r.sources.length(); i = i + 1 {
-      let preview = r.sources[i].text
-      let preview_len = if preview.length() > 80 { 80 } else { preview.length() }
-      let preview_str = preview[0:preview_len].to_string()
-      println("  [\{i + 1}] \{preview_str}...")
-    }
     println("\n")
   }
 
