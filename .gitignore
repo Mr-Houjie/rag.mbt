@@ -17,6 +17,11 @@ Thumbs.db
 
 # Data files
 rag_data/
+
+# Config (contains API keys)
+config.json
+
+# JSON files (except MoonBit config)
 *.json
 !moon.pkg.json
 !moon.mod.json

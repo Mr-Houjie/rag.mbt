@@ -5,10 +5,10 @@
 struct RAGPipeline {
   loader : TxtLoader
   splitter : SimpleSplitter
-  embedder : MockEmbedder
+  embedder : LocalEmbedder
   store : FileStore
   retriever : FileRetriever
-  generator : MockGenerator
+  generator : OpenAiGenerator
 }
 
 // ============================================================
@@ -18,10 +18,10 @@ struct RAGPipeline {
 struct Builder {
   loader : TxtLoader?
   splitter : SimpleSplitter?
-  embedder : MockEmbedder?
+  embedder : LocalEmbedder?
   store : FileStore?
   data_dir : String?
-  generator : MockGenerator?
+  generator : OpenAiGenerator?
 }
 
 pub fn RAGPipeline::builder() -> Builder {
@@ -36,7 +36,7 @@ pub fn Builder::with_splitter(self : Builder, splitter : SimpleSplitter) -> Buil
   { ..self, splitter: Some(splitter) }
 }
 
-pub fn Builder::with_embedder(self : Builder, embedder : MockEmbedder) -> Builder {
+pub fn Builder::with_embedder(self : Builder, embedder : LocalEmbedder) -> Builder {
   { ..self, embedder: Some(embedder) }
 }
 
@@ -48,7 +48,7 @@ pub fn Builder::with_data_dir(self : Builder, dir : String) -> Builder {
   { ..self, data_dir: Some(dir) }
 }
 
-pub fn Builder::with_generator(self : Builder, generator : MockGenerator) -> Builder {
+pub fn Builder::with_generator(self : Builder, generator : OpenAiGenerator) -> Builder {
   { ..self, generator: Some(generator) }
 }
 

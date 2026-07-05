@@ -3,11 +3,11 @@
 // ============================================================
 
 struct FileRetriever {
-  embedder : MockEmbedder
+  embedder : LocalEmbedder
   store : FileStore
 }
 
-pub fn FileRetriever::new(embedder : MockEmbedder, store : FileStore) -> FileRetriever {
+pub fn FileRetriever::new(embedder : LocalEmbedder, store : FileStore) -> FileRetriever {
   { embedder, store, }
 }
 

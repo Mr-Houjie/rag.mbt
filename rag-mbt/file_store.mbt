@@ -5,14 +5,14 @@
 
 // C FFI 声明（参见 file_io.c）
 #owned(path)
-extern "C" fn fs_read_all(path : String) -> String = "fs_read_all"
+pub extern "C" fn fs_read_all(path : String) -> String = "fs_read_all"
 
 #owned(path)
-  #owned(data)
-  extern "C" fn fs_write_all(path : String, data : String) -> Int = "fs_write_all"
+#owned(data)
+pub extern "C" fn fs_write_all(path : String, data : String) -> Int = "fs_write_all"
 
 #owned(path)
-extern "C" fn fs_remove_file(path : String) -> Int = "fs_remove_file"
+pub extern "C" fn fs_remove_file(path : String) -> Int = "fs_remove_file"
 
 #owned(path)
 extern "C" fn fs_ensure_dir(path : String) -> Int = "fs_ensure_dir"
