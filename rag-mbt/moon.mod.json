@@ -6,6 +6,6 @@
       "path": ".mooncakes/Kaida-Amethyst/python"
     }
   },
-  "license": "Apache-2.0",
+  "license": "MIT",
   "description": "MoonBit RAG (Retrieval-Augmented Generation) Library - 2阶段6模块完整封装"
 }
