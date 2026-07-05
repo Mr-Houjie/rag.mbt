@@ -39,21 +39,21 @@ fn main {
   println("  💬 \{query1}")
   println("─".repeat(50))
   let r1 = rag.query(query1, top_k=3)
-  println("\n📝 结果:\n\{r1.answer}")
+  println("📝 结果:\n\{r1.answer}")
 
   let query2 = "RAG 的工作原理是什么？"
-  println("─".repeat(50))
+  println("\n" + "─".repeat(50))
   println("  💬 \{query2}")
   println("─".repeat(50))
   let r2 = rag.query(query2, top_k=3)
-  println("\n📝 结果:\n\{r2.answer}")
+  println("📝 结果:\n\{r2.answer}")
 
   let query3 = "向量数据库在 RAG 中的作用是什么？"
-  println("─".repeat(50))
+  println("\n" + "─".repeat(50))
   println("  💬 \{query3}")
   println("─".repeat(50))
   let r3 = rag.query(query3, top_k=3)
-  println("\n📝 结果:\n\{r3.answer}")
+  println("📝 结果:\n\{r3.answer}")
 
   println("\n╔══════════════════════════════════════════╗")
   println("║  ✅ rag-mbt 端到端验证通过！              ║")

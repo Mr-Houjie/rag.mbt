@@ -134,14 +134,23 @@ pub fn RAGPipeline::query(self : RAGPipeline, query : String, top_k~ : Int = 3) 
   println("[5/6] 检索相关文档...")
   let results = self.retriever.retrieve(query, top_k)
   println("  ✅ 检索到 \{results.length()} 条相关结果")
-  
+
+  // 打印检索到的内容
+  for i = 0; i < results.length(); i = i + 1 {
+    println("  [来源 \{i + 1}] score=\{results[i].score}")
+    println("  \{results[i].chunk.text}")
+    println("")
+  }
+
   println("[6/6] 生成回答...")
   let sources : Array[Chunk] = []
   for r in results {
+    // 将 score 添加到 metadata
+    r.chunk.metadata["score"] = r.score.to_string()
     sources.push(r.chunk)
   }
   let result = self.generator.generate(query, sources)
   println("  ✅ 生成完成\n")
-  
+
   result
 }
