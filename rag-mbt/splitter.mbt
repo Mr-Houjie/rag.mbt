@@ -28,6 +28,10 @@ fn SimpleSplitter::split_text(self : SimpleSplitter, text : String) -> Array[Str
   chunks
 }
 
+pub fn SimpleSplitter::do_split(self : SimpleSplitter, docs : Array[Document]) -> Array[Chunk] {
+  self.split(docs)
+}
+
 impl TextSplitter for SimpleSplitter with split(self : SimpleSplitter, docs : Array[Document]) -> Array[Chunk] {
   let mut chunk_id = 0
   let all_chunks : Array[Chunk] = []

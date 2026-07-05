@@ -12,7 +12,7 @@ pub fn InMemoryStore::new() -> InMemoryStore {
 }
 
 // 余弦相似度
-fn cosine_sim(a : Array[Double], b : Array[Double]) -> Double {
+pub fn cosine_sim(a : Array[Double], b : Array[Double]) -> Double {
   let dim = a.length()
   let mut dot = 0.0
   let mut norm_a = 0.0

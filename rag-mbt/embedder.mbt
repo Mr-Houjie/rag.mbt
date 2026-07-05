@@ -10,7 +10,7 @@ pub fn MockEmbedder::new(dimension~ : Int = 32) -> MockEmbedder {
   { dimension, }
 }
 
-fn MockEmbedder::text_to_vector(self : MockEmbedder, text : String) -> Array[Double] {
+pub fn MockEmbedder::text_to_vector(self : MockEmbedder, text : String) -> Array[Double] {
   let dim = self.dimension
   let vec = Array::makei(dim, fn(_val) { 0.0 })
   let bytes = text.to_bytes()

@@ -10,6 +10,10 @@ pub fn MockGenerator::new(prefix~ : String = "基于以下资料回答：\n\n") 
   { prefix, }
 }
 
+pub fn MockGenerator::do_generate(self : MockGenerator, query : String, context : Array[Chunk]) -> GenerationResult {
+  self.generate(query, context)
+}
+
 impl Generator for MockGenerator with generate(self : MockGenerator, query : String, context : Array[Chunk]) -> GenerationResult {
   let mut answer = self.prefix
   
