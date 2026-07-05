@@ -2,7 +2,7 @@
   "import": [
     "moonbitlang/core/json",
     "moonbitlang/core/builtin",
-    "Kaida-Amethyst/python"
+    "moonbitlang/core/strconv"
   ],
   "supported-targets": ["native"],
   "native-stub": ["file_io.c"],

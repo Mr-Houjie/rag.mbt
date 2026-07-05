@@ -2,10 +2,5 @@
   "is-main": true,
   "import": [
     { "path": "user/rag-mbt", "alias": "ragmbt" }
-  ],
-  "link": {
-    "native": {
-      "cc-link-flags": "-framework CoreFoundation"
-    }
-  }
+  ]
 }

@@ -11,151 +11,49 @@ pub fn LocalEmbedder::new(model_name~ : String = "BAAI/bge-small-zh") -> LocalEm
   { model_name, }
 }
 
-impl Embedder for LocalEmbedder with embed_documents(self : LocalEmbedder, texts : Array[String]) -> Array[Array[Double]] {
-  @python.init_py()
-  
-  let st = @python.pyimport("sentence_transformers").unwrap()
-  
-  try {
-    match st.get_attr("SentenceTransformer") {
-      None => {
-        println("Error: SentenceTransformer class not found")
-        []
-      }
-      Some(@python.PyObjectEnum::PyCallable(st_class)) => {
-        let args = @python.PyTuple::new(1)
-        args.set(0, @python.PyString::from(self.model_name))
-        
-        match st_class.invoke(args?=Some(args), kwargs?=None) {
-          None => {
-            println("Error: Failed to create SentenceTransformer model")
-            []
-          }
-          Some(model_enum) => {
-            let model_obj = match model_enum {
-              @python.PyObjectEnum::PyClass(obj) => obj
-              _ => return []
-            }
-            
-            // 创建 Python 列表
-            let py_texts = @python.PyList::new()
-            for i = 0; i < texts.length(); i = i + 1 {
-              py_texts.append(@python.PyString::from(texts[i]))
-            }
-            
-            // 调用 encode 方法
-            match model_obj.get_attr("encode") {
-              None => {
-                println("Error: encode method not found")
-                []
-              }
-              Some(@python.PyObjectEnum::PyCallable(encode_func)) => {
-                let encode_args = @python.PyTuple::new(1)
-                encode_args.set(0, py_texts)
-                
-                match encode_func.invoke(args?=Some(encode_args), kwargs?=None) {
-                  None => {
-                    println("Error: Failed to encode texts")
-                    []
-                  }
-                  Some(result_enum) => {
-                    self.extract_embeddings(result_enum)
-                  }
-                }
-              }
-              _ => []
-            }
-          }
-        }
-      }
-      _ => []
+/// 用 Python 脚本一次性完成加载+编码，返回 JSON 字符串
+fn LocalEmbedder::run_python_encode(self : LocalEmbedder, texts : Array[String]) -> String {
+  // 构造 Python 脚本，通过 stdin 传参，避免复杂的 PyObject 操作
+  let mut script = "import sys, json\n"
+  script = script + "from sentence_transformers import SentenceTransformer\n"
+  script = script + "model = SentenceTransformer('" + self.model_name + "')\n"
+  script = script + "texts = json.loads(sys.stdin.read())\n"
+  script = script + "embs = model.encode(texts)\n"
+  script = script + "result = [[float(x) for x in emb] for emb in embs]\n"
+  script = script + "print(json.dumps(result))\n"
+
+  // 将 texts 转成 JSON 字符串
+  let mut json_texts = "["
+  for i = 0; i < texts.length(); i = i + 1 {
+    if i > 0 {
+      json_texts = json_texts + ", "
     }
-  } catch {
-    _ => {
-      println("Error: Exception during local embedding")
-      []
-    }
+    json_texts = json_texts + "\"" + texts[i] + "\""
   }
+  json_texts = json_texts + "]"
+
+  // 通过 C FFI 调用 python 执行脚本
+  let full_input = json_texts
+  let cmd = "python3"
+  let result = run_python_script(cmd, script, full_input)
+  result
 }
 
-fn LocalEmbedder::extract_embeddings(self : LocalEmbedder, result_enum : @python.PyObjectEnum) -> Array[Array[Double]] {
-  try {
-    // sentence-transformers 返回 numpy array
-    match result_enum {
-      @python.PyObjectEnum::PyClass(result_obj) => {
-        match result_obj.get_attr("tolist") {
-          None => []
-          Some(@python.PyObjectEnum::PyCallable(tolist_func)) => {
-            match tolist_func.invoke(args?=None, kwargs?=None) {
-              None => []
-              Some(list_enum) => {
-                match list_enum {
-                  @python.PyObjectEnum::PyList(embeddings_list) => {
-                    let result : Array[Array[Double]] = []
-                    for i = 0; i < embeddings_list.len(); i = i + 1 {
-                      match embeddings_list.get(i) {
-                        None => continue
-                        Some(inner_enum) => {
-                          match inner_enum {
-                            @python.PyObjectEnum::PyList(inner_list) => {
-                              let emb : Array[Double] = []
-                              for j = 0; j < inner_list.len(); j = j + 1 {
-                                match inner_list.get(j) {
-                                  None => continue
-                                  Some(@python.PyObjectEnum::PyFloat(f)) => emb.push(f.to_double())
-                                  Some(@python.PyObjectEnum::PyInteger(n)) => emb.push(n.to_double())
-                                  _ => continue
-                                }
-                              }
-                              result.push(emb)
-                            }
-                            _ => continue
-                          }
-                        }
-                      }
-                    }
-                    result
-                  }
-                  _ => []
-                }
-              }
-            }
-          }
-          _ => []  // 处理其他 PyObjectEnum 类型
-        }
-      }
-      @python.PyObjectEnum::PyList(embeddings_list) => {
-        // 直接是列表格式
-        let result : Array[Array[Double]] = []
-        for i = 0; i < embeddings_list.len(); i = i + 1 {
-          match embeddings_list.get(i) {
-            None => continue
-            Some(inner_enum) => {
-              match inner_enum {
-                @python.PyObjectEnum::PyList(inner_list) => {
-                  let emb : Array[Double] = []
-                  for j = 0; j < inner_list.len(); j = j + 1 {
-                    match inner_list.get(j) {
-                      None => continue
-                      Some(@python.PyObjectEnum::PyFloat(f)) => emb.push(f.to_double())
-                      Some(@python.PyObjectEnum::PyInteger(n)) => emb.push(n.to_double())
-                      _ => continue
-                    }
-                  }
-                  result.push(emb)
-                }
-                _ => continue
-              }
-            }
-          }
-        }
-        result
-      }
-      _ => []
-    }
-  } catch {
-    _ => []
+/// 用 C FFI 执行 Python 脚本并返回 stdout
+#owned(cmd)
+#owned(script)
+#owned(input)
+extern "C" fn run_python_script(cmd : String, script : String, input : String) -> String = "run_python_script"
+
+impl Embedder for LocalEmbedder with embed_documents(self : LocalEmbedder, texts : Array[String]) -> Array[Array[Double]] {
+  let output = self.run_python_encode(texts)
+  if output.length() == 0 {
+    println("Error: Python script returned empty output")
+    return []
   }
+
+  // 解析 JSON 输出 [[0.1, 0.2, ...], [0.3, 0.4, ...]]
+  parse_embeddings_json(output)
 }
 
 impl Embedder for LocalEmbedder with embed_query(self : LocalEmbedder, query : String) -> Array[Double] {
@@ -164,5 +62,130 @@ impl Embedder for LocalEmbedder with embed_query(self : LocalEmbedder, query : S
     embeddings[0]
   } else {
     []
+  }
+}
+
+/// 简单的 JSON 嵌套数组解析
+fn parse_embeddings_json(json : String) -> Array[Array[Double]] {
+  let result : Array[Array[Double]] = []
+  let mut i = 0
+  let n = json.length()
+
+  // 找到第一个 '['
+  while i < n && json[i] != '[' {
+    i = i + 1
+  }
+  if i >= n {
+    return result
+  }
+  i = i + 1  // 跳过外层 '['
+
+  // 解析每个内层数组
+  while i < n {
+    // 跳过空白和逗号
+    while i < n && (json[i] == ' ' || json[i] == ',' || json[i] == '\n' || json[i] == '\r' || json[i] == '\t') {
+      i = i + 1
+    }
+    if i >= n || json[i] == ']' {
+      break
+    }
+
+    if json[i] == '[' {
+      i = i + 1  // 跳过内层 '['
+      let emb : Array[Double] = []
+
+      // 解析内层数组的数字
+      while i < n && json[i] != ']' {
+        // 跳过空白和逗号
+        while i < n && (json[i] == ' ' || json[i] == ',' || json[i] == '\n' || json[i] == '\r' || json[i] == '\t') {
+          i = i + 1
+        }
+        if i >= n || json[i] == ']' {
+          break
+        }
+
+        // 解析一个数字
+        let (num, next_i) = parse_number(json, i)
+        if next_i > i {
+          emb.push(num)
+          i = next_i
+        } else {
+          i = i + 1  // 跳过无法解析的字符
+        }
+      }
+
+      if i < n && json[i] == ']' {
+        i = i + 1  // 跳过内层 ']'
+      }
+      result.push(emb)
+    } else {
+      i = i + 1
+    }
+  }
+
+  result
+}
+
+/// 从 JSON 字符串中解析一个数字
+fn parse_number(s : String, start : Int) -> (Double, Int) {
+  let mut i = start
+  let n = s.length()
+
+  // 跳过前导空白
+  while i < n && s[i] == ' ' {
+    i = i + 1
+  }
+
+  if i >= n {
+    return (0.0, start)
+  }
+
+  // 检查特殊值
+  if s[i] == 'n' {
+    // null
+    return (0.0, i + 4)
+  }
+
+  let num_start = i
+
+  // 负号
+  if i < n && s[i] == '-' {
+    i = i + 1
+  }
+
+  // 整数部分
+  while i < n && s[i] >= '0' && s[i] <= '9' {
+    i = i + 1
+  }
+
+  // 小数部分
+  if i < n && s[i] == '.' {
+    i = i + 1
+    while i < n && s[i] >= '0' && s[i] <= '9' {
+      i = i + 1
+    }
+  }
+
+  // 指数部分
+  if i < n && (s[i] == 'e' || s[i] == 'E') {
+    i = i + 1
+    if i < n && (s[i] == '+' || s[i] == '-') {
+      i = i + 1
+    }
+    while i < n && s[i] >= '0' && s[i] <= '9' {
+      i = i + 1
+    }
+  }
+
+  if i > num_start {
+    let num_str = s[num_start:i].to_owned()
+    try {
+      let d = @strconv.parse_double(num_str)
+      (d, i)
+    } catch {
+      _ => (0.0, start)
+    }
+  } else {
+    (0.0, start)
   }
 }

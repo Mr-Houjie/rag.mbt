@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 // UTF-16 (MoonBit string) 转 C string
 static char* mb_to_cstr(moonbit_string_t ms) {
@@ -95,4 +97,74 @@ int32_t fs_ensure_dir(moonbit_string_t path) {
   int result = mkdir(c_path, 0755);
   free(c_path);
   return result == 0 || errno == EEXIST ? 1 : 0;
+}
+
+// 执行 Python 脚本，通过 stdin 传输入，返回 stdout
+moonbit_string_t run_python_script(moonbit_string_t cmd, moonbit_string_t script, moonbit_string_t input) {
+  char* c_cmd = mb_to_cstr(cmd);
+  char* c_script = mb_to_cstr(script);
+  char* c_input = mb_to_cstr(input);
+
+  // 写 script 到临时文件
+  FILE* script_tmp = tmpfile();
+  if (!script_tmp) {
+    free(c_cmd); free(c_script); free(c_input);
+    return moonbit_make_string(0, 0);
+  }
+  fputs(c_script, script_tmp);
+  fflush(script_tmp);
+  rewind(script_tmp);
+
+  // 写 input 到临时文件
+  FILE* input_tmp = tmpfile();
+  if (!input_tmp) {
+    fclose(script_tmp);
+    free(c_cmd); free(c_script); free(c_input);
+    return moonbit_make_string(0, 0);
+  }
+  fputs(c_input, input_tmp);
+  fflush(input_tmp);
+  rewind(input_tmp);
+
+  // 构造命令：python3 /dev/fd/SCRIPT_FD < /dev/fd/INPUT_FD 2>/dev/null
+  char command[512];
+  snprintf(command, sizeof(command), "%s /dev/fd/%d < /dev/fd/%d 2>/dev/null",
+           c_cmd, fileno(script_tmp), fileno(input_tmp));
+
+  FILE* output_pipe = popen(command, "r");
+  if (!output_pipe) {
+    fclose(input_tmp);
+    fclose(script_tmp);
+    free(c_cmd); free(c_script); free(c_input);
+    return moonbit_make_string(0, 0);
+  }
+
+  // 读取输出
+  char* output = NULL;
+  size_t output_size = 0;
+  size_t output_cap = 0;
+  char buf[4096];
+  size_t n;
+  while ((n = fread(buf, 1, sizeof(buf), output_pipe)) > 0) {
+    if (output_size + n > output_cap) {
+      output_cap = (output_size + n) * 2;
+      output = (char*)realloc(output, output_cap);
+    }
+    memcpy(output + output_size, buf, n);
+    output_size += n;
+  }
+  pclose(output_pipe);
+
+  fclose(input_tmp);
+  fclose(script_tmp);
+  free(c_cmd); free(c_script); free(c_input);
+
+  if (!output || output_size == 0) {
+    if (output) free(output);
+    return moonbit_make_string(0, 0);
+  }
+
+  moonbit_string_t result = cstr_to_mb(output, (int32_t)output_size);
+  free(output);
+  return result;
 }
