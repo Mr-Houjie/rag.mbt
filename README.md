@@ -141,9 +141,9 @@ SentenceTransformer('BAAI/bge-small-zh')
 
 ```bash
 cd rag-mbt
+moon install
 moon build --target native cmd/main
-moon run --target native cmd/main
-```
+moon run --target native cmd/main```
 
 ## 使用示例
 

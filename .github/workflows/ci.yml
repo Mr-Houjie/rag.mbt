@@ -22,16 +22,10 @@ jobs:
         run: moon version
 
       - name: Install dependencies
-        run: |
-          cd rag-mbt
-          moon install
+        run: moon install
 
       - name: Build
-        run: |
-          cd rag-mbt
-          moon build --target native
+        run: moon build --target native
 
       - name: Run tests
-        run: |
-          cd rag-mbt
-          moon test --target native
+        run: moon test --target native
