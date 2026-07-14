@@ -42,7 +42,7 @@ fn OpenAiGenerator::run_python_generate(self : OpenAiGenerator, query : String, 
   result
 }
 
-impl Generator for OpenAiGenerator with generate(self : OpenAiGenerator, query : String, context : Array[Chunk]) -> GenerationResult {
+pub fn OpenAiGenerator::generate(self : OpenAiGenerator, query : String, context : Array[@ragmbt.Chunk]) -> @ragmbt.GenerationResult {
   let mut context_text = ""
   for i = 0; i < context.length(); i = i + 1 {
     context_text = context_text + "[来源 " + (i + 1).to_string() + "] " + context[i].text + "\n"
@@ -51,8 +51,8 @@ impl Generator for OpenAiGenerator with generate(self : OpenAiGenerator, query :
   let answer = self.run_python_generate(query, context_text)
 
   if answer.length() == 0 {
-    GenerationResult::new("Error: 生成回答失败", context)
+    @ragmbt.GenerationResult::new("Error: 生成回答失败", context)
   } else {
-    GenerationResult::new(answer, context)
+    @ragmbt.GenerationResult::new(answer, context)
   }
 }

@@ -8,10 +8,10 @@ pub struct Document {
 }
 
 pub struct Chunk {
-  id : String
-  text : String
-  metadata : Map[String, String]
-  embedding : Array[Double]?
+  pub id : String
+  pub text : String
+  pub metadata : Map[String, String]
+  pub embedding : Array[Double]?
 }
 
 pub struct SearchResult {

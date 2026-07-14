@@ -10,7 +10,7 @@ fn main {
   // ============================================================
   // 构建 RAG pipeline(纯原生 TF-IDF,无需 Python/API)
   // ============================================================
-  let rag = @ragmbt.Builder::native_tfidf(data_dir="rag_data").build()
+  let rag = @ragnative.native_tfidf(data_dir="rag_data").build()
   rag.describe()
   println("✅ Pipeline 构建完成\n")
 
@@ -30,7 +30,7 @@ fn main {
   println("────────────────────────────────────────────────\n")
 
   while true {
-    let line = @ragmbt.fs_read_line("❯ ")
+    let line = @ragnative.fs_read_line("❯ ")
     // 空字符串(EOF 或空行)、exit/quit/退出 → 退出
     if line == "" || line == "exit" || line == "quit" || line == "退出" {
       break

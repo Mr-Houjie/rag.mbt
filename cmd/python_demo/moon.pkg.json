@@ -1,6 +1,8 @@
 {
   "is-main": true,
   "import": [
-    { "path": "houjie/rag-mbt", "alias": "ragmbt" }
-  ]
+    { "path": "houjie/rag-mbt", "alias": "ragmbt" },
+    { "path": "houjie/rag-mbt/native", "alias": "ragnative" }
+  ],
+  "supported-targets": ["native"]
 }

@@ -11,7 +11,7 @@ pub fn FileRetriever::new(embedder : LocalEmbedder, store : FileStore) -> FileRe
   { embedder, store, }
 }
 
-impl Retriever for FileRetriever with retrieve(self : FileRetriever, query : String, top_k : Int) -> Array[SearchResult] {
+pub fn FileRetriever::retrieve(self : FileRetriever, query : String, top_k : Int) -> Array[@ragmbt.SearchResult] {
   let query_emb = self.embedder.embed_query(query)
   self.store.search(query_emb, top_k)
 }

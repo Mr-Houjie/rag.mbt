@@ -1,0 +1,14 @@
+{
+  "import": [
+    { "path": "houjie/rag-mbt", "alias": "ragmbt" },
+    "moonbitlang/core/json",
+    "moonbitlang/core/strconv"
+  ],
+  "supported-targets": ["native"],
+  "native-stub": ["file_io.c"],
+  "link": {
+    "native": {
+      "stub-cc-flags": "-O2"
+    }
+  }
+}

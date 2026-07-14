@@ -38,11 +38,11 @@ fn write_file(path : String, content : String) -> Bool {
 
 struct FileStore {
   file_path : String
-  store : InMemoryStore
+  mut store : @ragmbt.InMemoryStore
 }
 
 pub fn FileStore::new(file_path : String) -> FileStore {
-  let store = InMemoryStore::new()
+  let store = @ragmbt.InMemoryStore::new()
   let fs = { file_path, store }
   fs._load_from_file()
   fs
@@ -119,7 +119,7 @@ fn FileStore::_load_from_file(self : FileStore) -> Unit {
                       _ => continue
                     }
                     if embedding.length() > 0 {
-                      let chunk = Chunk::new(id, text, metadata).with_embedding(embedding)
+                      let chunk = @ragmbt.Chunk::new(id, text, metadata).with_embedding(embedding)
                       self.store.chunks.push(chunk)
                       self.store.embeddings.push(embedding)
                     }
@@ -158,7 +158,24 @@ fn FileStore::_save_to_file(self : FileStore) -> Unit {
   let _ = write_file(path, json_str)
 }
 
-impl VectorStore for FileStore with add(self : FileStore, new_chunks : Array[Chunk]) -> Unit {
+// 本地余弦相似度(避免跨包调用 trait 方法)
+fn file_cosine_sim(a : Array[Double], b : Array[Double]) -> Double {
+  let dim = a.length()
+  let mut dot = 0.0
+  let mut norm_a = 0.0
+  let mut norm_b = 0.0
+  for i = 0; i < dim; i = i + 1 {
+    dot = dot + a[i] * b[i]
+    norm_a = norm_a + a[i] * a[i]
+    norm_b = norm_b + b[i] * b[i]
+  }
+  if norm_a == 0.0 || norm_b == 0.0 {
+    return 0.0
+  }
+  dot / (norm_a.sqrt() * norm_b.sqrt())
+}
+
+pub fn FileStore::add(self : FileStore, new_chunks : Array[@ragmbt.Chunk]) -> Unit {
   for chunk in new_chunks {
     match chunk.embedding {
       Some(emb) => {
@@ -171,16 +188,38 @@ impl VectorStore for FileStore with add(self : FileStore, new_chunks : Array[Chu
   self._save_to_file()
 }
 
-impl VectorStore for FileStore with search(self : FileStore, query_embedding : Array[Double], top_k : Int) -> Array[SearchResult] {
-  self.store.search(query_embedding, top_k)
+pub fn FileStore::search(self : FileStore, query_embedding : Array[Double], top_k : Int) -> Array[@ragmbt.SearchResult] {
+  let scores : Array[(Double, Int)] = []
+  let n = self.store.embeddings.length()
+  for i = 0; i < n; i = i + 1 {
+    let score = file_cosine_sim(query_embedding, self.store.embeddings[i])
+    scores.push((score, i))
+  }
+  // 简单冒泡排序(降序)
+  for i = 0; i < scores.length(); i = i + 1 {
+    for j = i + 1; j < scores.length(); j = j + 1 {
+      if scores[i].0 < scores[j].0 {
+        let tmp = scores[i]
+        scores[i] = scores[j]
+        scores[j] = tmp
+      }
+    }
+  }
+  // 取 top_k
+  let k = if top_k < scores.length() { top_k } else { scores.length() }
+  let results : Array[@ragmbt.SearchResult] = []
+  for i = 0; i < k; i = i + 1 {
+    let idx = scores[i].1
+    results.push(@ragmbt.SearchResult::new(self.store.chunks[idx], scores[i].0))
+  }
+  results
 }
 
-impl VectorStore for FileStore with clear(self : FileStore) -> Unit {
-  self.store.chunks = []
-  self.store.embeddings = []
+pub fn FileStore::clear(self : FileStore) -> Unit {
+  self.store = @ragmbt.InMemoryStore::new()
   let _ = fs_remove_file(self.file_path)
 }
 
-impl VectorStore for FileStore with count(self : FileStore) -> Int {
+pub fn FileStore::count(self : FileStore) -> Int {
   self.store.chunks.length()
 }

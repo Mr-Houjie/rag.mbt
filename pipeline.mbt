@@ -146,30 +146,6 @@ pub fn Builder::with_tfidf_embedder(self : Builder, embedder : TfidfEmbedder) ->
   }
 }
 
-pub fn Builder::with_local_embedder(self : Builder, embedder : LocalEmbedder) -> Builder {
-  { ..self,
-    embed_docs_fn: Some(fn(texts : Array[String]) {
-      embedder.embed_documents(texts)
-    }),
-    embed_query_fn: Some(fn(query : String) {
-      embedder.embed_query(query)
-    }),
-    embedder_label: "LocalEmbedder(bge-small-zh)"
-  }
-}
-
-/// 注入 FileStore(需要保留 store 引用)
-pub fn Builder::with_file_store(self : Builder, store : FileStore) -> Builder {
-  { ..self,
-    store_add_fn: Some(fn(chunks : Array[Chunk]) {
-      store.add(chunks)
-    }),
-    store_count_fn: Some(fn() {
-      store.count()
-    })
-  }
-}
-
 /// 注入 IVFStore
 pub fn Builder::with_ivf_store(self : Builder, store : IVFStore) -> Builder {
   { ..self,
@@ -178,15 +154,6 @@ pub fn Builder::with_ivf_store(self : Builder, store : IVFStore) -> Builder {
     }),
     store_count_fn: Some(fn() {
       store.count()
-    })
-  }
-}
-
-/// 注入 FileRetriever(基于 LocalEmbedder + FileStore)
-pub fn Builder::with_file_retriever(self : Builder, retriever : FileRetriever) -> Builder {
-  { ..self,
-    retrieve_fn: Some(fn(query : String, top_k : Int) {
-      retriever.retrieve(query, top_k)
     })
   }
 }
@@ -217,79 +184,6 @@ pub fn Builder::with_mock_generator(self : Builder, gen : MockGenerator) -> Buil
     }),
     generator_label: "MockGenerator"
   }
-}
-
-/// 注入 OpenAiGenerator
-pub fn Builder::with_openai_generator(self : Builder, gen : OpenAiGenerator) -> Builder {
-  { ..self,
-    generate_fn: Some(fn(query : String, ctx : Array[Chunk]) {
-      gen.generate(query, ctx)
-    }),
-    generator_label: "OpenAiGenerator"
-  }
-}
-
-/// 便捷方法:配置数据目录(创建一个 FileStore 并注入)
-pub fn Builder::with_data_dir(self : Builder, dir : String) -> Builder {
-  let store_path = "\{dir}/vectors.json"
-  let store = FileStore::new(store_path)
-  self.with_file_store(store)
-}
-
-// ============================================================
-// 工厂方法:常用组合
-// ============================================================
-
-/// 创建纯原生 Pipeline(无需 Python/API)
-/// - TxtLoader + SimpleSplitter + MockEmbedder + FileStore + BM25 + MockGenerator
-pub fn Builder::native_mock(data_dir~ : String = "rag_data") -> Builder {
-  let dir = data_dir
-  let store_path = "\{dir}/vectors.json"
-  let store = FileStore::new(store_path)
-  let bm25 = BM25Retriever::new()
-  RAGPipeline::builder()
-    .with_loader(TxtLoader::new("docs/"))
-    .with_splitter(SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
-    .with_mock_embedder(MockEmbedder::new(dimension=64))
-    .with_store_fns(
-      add=fn(chunks : Array[Chunk]) {
-        store.add(chunks)
-        bm25.add_documents(chunks)
-      },
-      count=fn() {
-        store.count()
-      }
-    )
-    .with_bm25_retriever(bm25)
-    .with_mock_generator(MockGenerator::new())
-}
-
-/// 创建 TF-IDF 原生 Pipeline(无需 Python/API)
-/// - TxtLoader + SimpleSplitter + TfidfEmbedder + FileStore + 向量检索 + MockGenerator
-pub fn Builder::native_tfidf(data_dir~ : String = "rag_data") -> Builder {
-  let dir = data_dir
-  let store_path = "\{dir}/vectors.json"
-  // 清理旧数据,避免多次运行累加(之前会从 5 累加到 40+)
-  let _ = fs_remove_file(store_path)
-  let store = FileStore::new(store_path)
-  let embedder = TfidfEmbedder::new()
-  RAGPipeline::builder()
-    .with_loader(TxtLoader::new("docs/"))
-    .with_splitter(SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
-    .with_tfidf_embedder(embedder)
-    .with_store_fns(
-      add=fn(chunks : Array[Chunk]) {
-        store.add(chunks)
-      },
-      count=fn() {
-        store.count()
-      }
-    )
-    .with_retrieve_fn(fn(query : String, top_k : Int) {
-      let q_emb = embedder.embed_query(query)
-      store.search(q_emb, top_k)
-    })
-    .with_mock_generator(MockGenerator::new())
 }
 
 // ============================================================

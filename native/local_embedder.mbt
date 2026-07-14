@@ -44,7 +44,7 @@ fn LocalEmbedder::run_python_encode(self : LocalEmbedder, texts : Array[String])
 #owned(input)
 extern "C" fn run_python_script(cmd : String, script : String, input : String) -> String = "run_python_script"
 
-impl Embedder for LocalEmbedder with embed_documents(self : LocalEmbedder, texts : Array[String]) -> Array[Array[Double]] {
+pub fn LocalEmbedder::embed_documents(self : LocalEmbedder, texts : Array[String]) -> Array[Array[Double]] {
   let output = self.run_python_encode(texts)
   if output.length() == 0 {
     println("Error: Python script returned empty output")
@@ -55,7 +55,7 @@ impl Embedder for LocalEmbedder with embed_documents(self : LocalEmbedder, texts
   parse_embeddings_json(output)
 }
 
-impl Embedder for LocalEmbedder with embed_query(self : LocalEmbedder, query : String) -> Array[Double] {
+pub fn LocalEmbedder::embed_query(self : LocalEmbedder, query : String) -> Array[Double] {
   let embeddings = self.embed_documents([query])
   if embeddings.length() > 0 {
     embeddings[0]

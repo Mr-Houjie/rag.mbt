@@ -21,7 +21,17 @@ rag_data/
 # Config (contains API keys)
 config.json
 
-# JSON files (except MoonBit config)
+# MoonBit dependencies (downloaded by moon install)
+.mooncakes/
+.moon-lock
+
+# Backup / unused files
+*.bak
+*.mbt.bak
+
+# JSON files (except MoonBit configs)
 *.json
 !moon.pkg.json
 !moon.mod.json
+!**/moon.pkg.json
+!**/moon.mod.json

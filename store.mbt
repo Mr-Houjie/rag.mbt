@@ -2,9 +2,9 @@
 // InMemoryStore - 内存向量存储（余弦相似度）
 // ============================================================
 
-struct InMemoryStore {
-  mut chunks : Array[Chunk]
-  mut embeddings : Array[Array[Double]]
+pub struct InMemoryStore {
+  pub mut chunks : Array[Chunk]
+  pub mut embeddings : Array[Array[Double]]
 }
 
 pub fn InMemoryStore::new() -> InMemoryStore {
