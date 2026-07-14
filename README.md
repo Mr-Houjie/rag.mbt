@@ -2,8 +2,9 @@
 
 > 基于 MoonBit 的 RAG（检索增强生成）库 —— 2 阶段 6 模块完整封装
 
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![MoonBit](https://img.shields.io/badge/MoonBit-0.1.20260608+- purple.svg)](https://www.moonbitlang.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![MoonBit](https://img.shields.io/badge/MoonBit-0.1.20260608+-purple.svg)](https://www.moonbitlang.com/)
+[![mooncakes.io](https://img.shields.io/badge/mooncakes.io-houjie%2Frag--mbt-blue)](https://mooncakes.io/packages/houjie/rag-mbt)
 
 ## 项目简介
 
@@ -140,10 +141,11 @@ SentenceTransformer('BAAI/bge-small-zh')
 ### 5. 构建并运行
 
 ```bash
-cd rag-mbt
+moon add houjie/rag-mbt
 moon install
 moon build --target native cmd/main
-moon run --target native cmd/main```
+moon run --target native cmd/main
+```
 
 ## 使用示例
 
