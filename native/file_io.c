@@ -218,6 +218,45 @@ moonbit_string_t run_python_script(moonbit_string_t cmd, moonbit_string_t script
   return result;
 }
 
+// 列出目录下所有 .txt 文件，返回文件名列表（每行一个，不含目录前缀）
+// 目录不存在或为空时返回空字符串
+#include <dirent.h>
+moonbit_string_t fs_list_txt_files(moonbit_string_t path) {
+  char* c_path = mb_to_cstr(path);
+  DIR* dir = opendir(c_path);
+  free(c_path);
+  if (!dir) {
+    return moonbit_make_string(0, 0);
+  }
+  char* result = NULL;
+  size_t len = 0, cap = 0;
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    const char* name = entry->d_name;
+    size_t name_len = strlen(name);
+    // 只收集 .txt 文件
+    if (name_len < 4 || strcmp(name + name_len - 4, ".txt") != 0) {
+      continue;
+    }
+    if (len + name_len + 1 > cap) {
+      cap = (len + name_len + 1) * 2 + 16;
+      result = (char*)realloc(result, cap);
+    }
+    memcpy(result + len, name, name_len);
+    len += name_len;
+    result[len++] = '\n';
+  }
+  closedir(dir);
+  if (!result || len == 0) {
+    if (result) free(result);
+    return moonbit_make_string(0, 0);
+  }
+  result[len] = '\0';
+  moonbit_string_t ms = cstr_to_mb(result, (int32_t)len);
+  free(result);
+  return ms;
+}
+
 // 从 stdin 读取一行(去掉末尾换行符),EOF 或读取失败返回空字符串
 // prompt 参数会先打印到 stdout(不换行),用于交互式提示符
 moonbit_string_t fs_read_line(moonbit_string_t prompt) {

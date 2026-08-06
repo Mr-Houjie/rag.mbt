@@ -24,8 +24,20 @@ jobs:
       - name: Install dependencies
         run: moon install
 
-      - name: Build
+      - name: Check (native)
+        run: moon check --target native
+
+      - name: Check (wasm-gc)
+        run: moon check --target wasm-gc
+
+      - name: Build (native)
         run: moon build --target native
 
-      - name: Run tests
+      - name: Build (wasm-gc)
+        run: moon build --target wasm-gc
+
+      - name: Run tests (native)
         run: moon test --target native
+
+      - name: Run tests (wasm-gc)
+        run: moon test --target wasm-gc

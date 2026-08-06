@@ -30,16 +30,27 @@
 ## 四、核心功能
 
 1. **6 大可插拔 Trait**：DocumentLoader、TextSplitter、Embedder、VectorStore、Retriever、Generator
-2. **默认实现**：TxtLoader、SimpleSplitter、LocalEmbedder（bge-small-zh）、FileStore（JSON 持久化）、FileRetriever、OpenAiGenerator
-3. **Pipeline 编排**：`RAGPipeline::builder()` 流式组装组件
-4. **向量持久化**：余弦相似度搜索 + JSON 文件存储
-5. **多语言互操作**：C FFI 文件 I/O + Python 子进程调用嵌入模型与 LLM
-6. **工程化**：单元测试 + GitHub Actions CI
+2. **多种检索算法（纯 MoonBit 原生）**：TF-IDF 向量检索、BM25 稀疏检索、IVF 聚类加速、Hybrid 混合检索（RRF 融合）
+3. **默认实现**：TxtLoader、SimpleSplitter、TfidfEmbedder、InMemoryStore、BM25Retriever、MockGenerator
+4. **真实文件加载**（native）：通过 C FFI 目录遍历 + 文件读取，从 `docs/` 加载真实 `.txt` 文档
+5. **native 扩展组件**：LocalEmbedder（bge-small-zh）、FileStore（JSON 持久化）、FileRetriever、OpenAiGenerator
+6. **Pipeline 编排**：`RAGPipeline::builder()` 流式组装组件
+7. **多语言互操作**：C FFI 文件 I/O + Python 子进程调用嵌入模型与 LLM
+8. **工程化**：135 个单元测试 + GitHub Actions CI（check / build / test，native + wasm-gc 双目标）
+9. **mooncakes.io 发布**：`houjie/rag-mbt`（https://mooncakes.io/packages/houjie/rag-mbt）
 
 ## 五、项目性质
 
 **原创实现**（非移植）。代码 100% 由作者独立编写，架构思想借鉴 LangChain 与 LlamaIndex 的设计范式（属公开方法论参考，非代码复制）。
 
-**原创工程工作**：基于 MoonBit Trait 系统的接口设计、MoonBit ↔ C FFI 文件 I/O 封装、MoonBit ↔ Python 子进程通信协议、FileStore 持久化方案、Builder 模式的 MoonBit 实现。
+**原创工程工作**：
+- 基于 MoonBit Trait 系统的接口设计（6 大 Trait + Builder 闭包注入模式）
+- MoonBit ↔ C FFI 文件 I/O / 目录遍历 / Python 子进程通信协议
+- 纯 MoonBit 实现的 TF-IDF / BM25 / IVF / Hybrid 检索算法
+- 双包架构：wasm-gc 兼容的纯 MoonBit 核心库 + native-only C FFI 扩展包
+- FileStore JSON 持久化方案
 
-**外部依赖**：BAAI/bge-small-zh（MIT）、sentence-transformers（Apache-2.0）、openai SDK（MIT），均遵守相应许可证。
+**外部依赖**（均遵守相应许可证，仓库 `LICENSE` 为 MIT）：
+- 核心库：零外部依赖（仅 moonbitlang/core）
+- native 扩展：BAAI/bge-small-zh（MIT）、sentence-transformers（Apache-2.0）、openai SDK（MIT）
+- C FFI 层：标准 C 库（POSIX），无第三方代码复制

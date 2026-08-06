@@ -62,7 +62,9 @@ pub fn native_mock(data_dir~ : String = "rag_data") -> @ragmbt.Builder {
   let store = FileStore::new(store_path)
   let bm25 = @ragmbt.BM25Retriever::new()
   let b = @ragmbt.RAGPipeline::builder()
-  let b = @ragmbt.Builder::with_loader(b, @ragmbt.TxtLoader::new("docs/"))
+  let b = @ragmbt.Builder::with_load_fn(b, fn(_path : String) {
+    load_docs_from_dir("docs/")
+  })
   let b = @ragmbt.Builder::with_splitter(b, @ragmbt.SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
   let b = @ragmbt.Builder::with_mock_embedder(b, @ragmbt.MockEmbedder::new(dimension=64))
   let b = @ragmbt.Builder::with_store_fns(b,
@@ -87,7 +89,9 @@ pub fn native_tfidf(data_dir~ : String = "rag_data") -> @ragmbt.Builder {
   let store = FileStore::new(store_path)
   let embedder = @ragmbt.TfidfEmbedder::new()
   let b = @ragmbt.RAGPipeline::builder()
-  let b = @ragmbt.Builder::with_loader(b, @ragmbt.TxtLoader::new("docs/"))
+  let b = @ragmbt.Builder::with_load_fn(b, fn(_path : String) {
+    load_docs_from_dir("docs/")
+  })
   let b = @ragmbt.Builder::with_splitter(b, @ragmbt.SimpleSplitter::new(chunk_size=200, chunk_overlap=30))
   let b = @ragmbt.Builder::with_tfidf_embedder(b, embedder)
   let b = @ragmbt.Builder::with_store_fns(b,
